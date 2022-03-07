@@ -26,7 +26,7 @@ library(Matrix)
 sparse.mat <- as(mat, "sparseMatrix")
 dim(sparse.mat)
 
-# saveRDS(sparse.mat, "data/GSE138852_sparseMatrix.rds")
+saveRDS(sparse.mat, "data/GSE138852_sparseMatrix.rds")
 
 
 
