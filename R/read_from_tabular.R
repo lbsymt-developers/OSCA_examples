@@ -1,4 +1,6 @@
 library(BiocFileCache)
+path <- tempfile()
+bfc <- BiocFileCache(path, ask = FALSE)
 bfc <- BiocFileCache(ask=FALSE)
 url <- file.path("ftp://ftp.ncbi.nlm.nih.gov/geo/series",
                  "GSE85nnn/GSE85241/suppl",
@@ -16,5 +18,16 @@ if (.Platform$OS.type=="windows") {
   file.symlink(muraro.fname, local.name)
 }
 
+# Descargar como matriz
 mat <- as.matrix(read.delim("GSE85241_cellsystems_dataset_4donors_updated.csv.gz"))
 dim(mat) # number of rows, number of columns
+
+
+# Descargar como matriz esparcida
+library(scuttle)
+sparse.mat <- readSparseCounts("GSE85241_cellsystems_dataset_4donors_updated.csv.gz")
+dim(sparse.mat)
+
+# We can see that it uses less memory compared to 'mat'.
+object.size(sparse.mat)
+object.size(mat)
