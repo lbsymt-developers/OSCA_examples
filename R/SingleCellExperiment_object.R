@@ -113,5 +113,16 @@ rowRanges(sce)[1:10,]
 
 # OTROS METADATOS
 
+# Para agregar meytadatos de genes que nos interesen
+my_genes <- c("gene_1", "gene_5")
+metadata(sce) <- list(favorite_genes = my_genes)
+metadata(sce)
+
+# Y se puede agregar mas información con el simbolo $
+your_genes <- c("gene_4", "gene_8")
+metadata(sce)$your_genes <- your_genes
+metadata(sce)
+
+
 
 
