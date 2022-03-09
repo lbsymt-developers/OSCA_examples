@@ -159,7 +159,37 @@ rowData(sce2) # twice as many rows
 
 # SINGLE-CELL-SPECIFIC-FIELDS
 
+# Reduccion de dimensiones
+sce <- scater::logNormCounts(sce)
+sce <- scater::runPCA(sce)
+dim(reducedDim(sce, "PCA"))
+
+sce <- scater::runTSNE(sce, perplexity = 0.1)
+head(reducedDim(sce, "TSNE"))
+
+# Podemos ver los nombres de todas nuestras entradas en la ranura reducedDims a través del accesorio,
+# reducedDims(). Tenga en cuenta que esto es plural y devuelve una lista de todos los resultados, mientras que reducedDim() sólo devuelve un único resultado.
+
+reducedDims(sce)
+
+# Para agregar el clustering o reduccion manualmente se utiliza lo siguiente:
+u <- uwot::umap(t(logcounts(sce)), n_neighbors = 2)
+reducedDim(sce, "UMAP_uwot") <- u
+reducedDims(sce) # Now stored in the object.
+head(reducedDim(sce, "UMAP_uwot"))
 
 
+# Factores de tamaño
+sce <- scran::computeSumFactors(sce)
+summary(sizeFactors(sce))
 
+sizeFactors(sce) <- scater::librarySizeFactors(sce)
+summary(sizeFactors(sce))
+
+# La función colLabels() nos permite obtener o establecer un vector o factor de etiquetas por célula,
+# que suelen corresponder a las agrupaciones asignadas por el clustering no supervisado (Capítulo Básico 5)
+# o a las identidades de tipo de célula predichas por los algoritmos de clasificación (Capítulo Básico 7).
+
+colLabels(sce) <- scran::clusterCells(sce, use.dimred="PCA")
+table(colLabels(sce))
 
