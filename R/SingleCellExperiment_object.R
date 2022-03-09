@@ -100,6 +100,12 @@ rowRanges(sce) # empty
 # La forma en que rellenamos los rowRanges depende del organismo y de la anotación utilizada durante el alineamiento y la cuantificación.
 # En este caso, tenemos identificadores de Ensembl, por lo que podríamos utilizar rtracklayer
 # para cargar un GRanges desde un archivo GTF que contenga la anotación de Ensembl utilizada en este conjunto de datos:
+
+"http://ftp.ensembl.org/pub/release-100/gtf/homo_sapiens/"
+# The paper uses Ensembl 82.
+library(BiocFileCache)
+mm10.gtf <- bfcrpath(bfc, file.path("http://ftp.ensembl.org/pub/release-82",
+                                    "gtf/mus_musculus/Mus_musculus.GRCm38.82.gtf.gz"))
 gene.data <- rtracklayer::import(mm10.gtf)
 
 # Cleaning up the object.
