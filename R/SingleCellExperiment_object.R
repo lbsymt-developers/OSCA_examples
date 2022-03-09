@@ -124,5 +124,42 @@ metadata(sce)$your_genes <- your_genes
 metadata(sce)
 
 
+# SUBSETTING Y COMBINACIÓN
+
+first.10 <- sce[,1:10]
+ncol(counts(first.10)) # only 10 columns.
+
+# Del mismo modo, si sólo quisiéramos celdas de tipo salvaje,
+# podríamos subconjuntar nuestro objeto sce basándonos en sus entradas de colData():
+wt.only <- sce[, sce$phenotype == "wild type phenotype"]
+ncol(counts(wt.only))
+colData(wt.only)
+
+# La misma lógica se aplica a rowData().
+# Digamos que sólo queremos conservar los genes codificadores de proteínas:
+coding.only <- sce[rowData(sce)$gene_biotype == "protein_coding",]
+nrow(counts(coding.only))
+rowData(coding.only)
+
+# Por el contrario, si tuviéramos que combinar varios objetos SingleCellExperiment,
+# la clase se encargaría de combinar tanto los valores de expresión como la anotación asociada de forma coherente.
+# Podemos utilizar cbind() para combinar objetos por columna,
+# suponiendo que todos los objetos implicados tienen los mismos valores de anotación de fila y campos de anotación de columna compatibles.
+
+sce2 <- cbind(sce, sce)
+ncol(counts(sce2)) # twice as many columns
+colData(sce2) # twice as many rows
+
+# Del mismo modo, podemos utilizar rbind() para combinar objetos por fila,
+# suponiendo que todos los objetos tienen los mismos valores de anotación de columna y campos de anotación de fila compatibles.
+sce2 <- rbind(sce, sce)
+nrow(counts(sce2)) # twice as many rows
+rowData(sce2) # twice as many rows
+
+
+# SINGLE-CELL-SPECIFIC-FIELDS
+
+
+
 
 
