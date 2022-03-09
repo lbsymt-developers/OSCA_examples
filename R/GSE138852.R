@@ -91,5 +91,16 @@ rowRanges(sce_138852)
 
 #  REDUCCION DE DIMENSIONES
 
+sce_138852 <- scater::logNormCounts(sce_138852)
+sce_138852 <- scater::runPCA(sce_138852)
+dim(reducedDim(sce_138852, "PCA"))
 
+sce_138852 <- scater::runTSNE(sce_138852, perplexity = 0.1)
+head(reducedDim(sce_138852, "TSNE"))
 
+sce_138852 <- scater::runUMAP(sce_138852)
+# reducedDim(sce, "UMAP_uwot") <- u
+# reducedDims(sce) # Now stored in the object.
+# head(reducedDim(sce, "UMAP_uwot"))
+
+save(sce_138852, file = "data/sce_138852.RData")
