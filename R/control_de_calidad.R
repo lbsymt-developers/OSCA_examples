@@ -84,3 +84,27 @@ attr(reasons$low_n_features, "thresholds")
 # Con esta estrategia, los umbrales se adaptan tanto a la ubicación como a la dispersión de la distribución de valores para una métrica determinada.
 # Esto permite que el procedimiento de control de calidad se ajuste a los cambios en la profundidad de la secuenciación,
 # la eficiencia de la captura de ADNc, el contenido mitocondrial, etc., sin requerir ninguna intervención del usuario o experiencia previa.
+
+
+# OTRAS APROXIMACIONES
+
+# Otra estrategia consiste en identificar los valores atípicos en un espacio de alta dimensión basándose en las métricas de control de calidad de cada celda.
+# Utilizamos métodos de robustbase para cuantificar la "perificidad" de cada celda en función de sus métricas de control de calidad y, a continuación,
+# utilizamos isOutlier() para identificar las celdas de baja calidad que presentan niveles inusualmente altos de perificidad.
+
+stats <- cbind(log10(df$sum), log10(df$detected),
+               df$subsets_Mito_percent, df$altexps_ERCC_percent)
+
+library(robustbase)
+outlying <- adjOutlyingness(stats, only.outlyingness = TRUE)
+multi.outlier <- isOutlier(outlying, type = "higher")
+summary(multi.outlier)
+
+# Para completar, observamos que los valores atípicos también pueden identificarse a partir de los perfiles de expresión génica,
+# en lugar de las métricas de control de calidad.
+# Consideramos que se trata de una estrategia arriesgada, ya que puede eliminar células de alta calidad en poblaciones poco frecuentes.
+
+
+# PLOTS DE DIAGNOSTICO
+
+
