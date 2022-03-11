@@ -50,5 +50,37 @@ DataFrame(LibSize=sum(qc.lib), NExprs=sum(qc.nexprs),
           SpikeProp=sum(qc.spike), MitoProp=sum(qc.mito), Total=sum(discard))
 
 
+# En este caso, suponemos que la mayor parte del conjunto de datos está formada por celdas de alta calidad.
+# A continuación, identificamos las celdas que son valores atípicos para las distintas métricas de control de calidad,
+# basándonos en la desviación absoluta media (MAD) del valor medio de cada métrica en todas las celdas. Por defecto,
+# consideramos que un valor es un valor atípico si se aleja más de 3 DAM de la mediana en la dirección "problemática".
+# Esto está motivado por el hecho de que este filtro retendrá el 99% de los valores no atípicos que siguen una distribución normal.
+# Lo demostramos utilizando la función perCellQCFilters() en las métricas de control de calidad del conjunto de datos 416B.
 
+reasons <- perCellQCFilters(df,
+                            sub.fields=c("subsets_Mito_percent", "altexps_ERCC_percent"))
+colSums(as.matrix(reasons))
 
+# Esta función identificará las celdas con tamaños de bibliotecas transformados logarítmicamente que estén más de 3 DAM por debajo de la mediana.
+# Se utiliza una transformación logarítmica para mejorar la resolución en valores pequeños cuando type="lower" y para evitar umbrales negativos que no tendrían sentido para una métrica no negativa.
+# Además, no es infrecuente que la distribución de los tamaños de las bibliotecas muestre una cola derecha pesada;
+# la transformación logarítmica evita la inflación de la MAD de una manera que podría comprometer la detección de valores atípicos en la cola izquierda.
+# (En general, hace que la distribución parezca más normal para justificar el razonamiento del 99% mencionado anteriormente).
+# La función también hará lo mismo para el número de genes expresados transformado en logaritmo.
+
+# perCellQCFilters() también identificará valores atípicos para las métricas basadas en la proporción especificadas en los argumentos sub.fields=.
+# Estas distribuciones a menudo muestran una cola derecha pesada, pero a diferencia de las dos métricas anteriores,
+# es la propia cola derecha la que contiene las supuestas células de baja calidad.
+# Por lo tanto, no realizamos ninguna transformación para reducir la cola, sino que esperamos que las celdas de la cola se identifiquen como grandes valores atípicos.
+# (Aunque teóricamente es posible obtener un umbral sin sentido por encima del 100%, esto es lo suficientemente raro como para no ser una preocupación práctica).
+
+# Una celda que es un valor atípico para cualquiera de estas métricas se considera de baja calidad y se descarta.
+# Esto se recoge en la columna de descartes, que puede utilizarse para un filtrado posterior
+
+summary(reasons$discard)
+attr(reasons$low_lib_size, "thresholds")
+attr(reasons$low_n_features, "thresholds")
+
+# Con esta estrategia, los umbrales se adaptan tanto a la ubicación como a la dispersión de la distribución de valores para una métrica determinada.
+# Esto permite que el procedimiento de control de calidad se ajuste a los cambios en la profundidad de la secuenciación,
+# la eficiencia de la captura de ADNc, el contenido mitocondrial, etc., sin requerir ninguna intervención del usuario o experiencia previa.
