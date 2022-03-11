@@ -107,4 +107,97 @@ summary(multi.outlier)
 
 # PLOTS DE DIAGNOSTICO
 
+# Es una buena práctica inspeccionar las distribuciones de las métricas de control de calidad para identificar posibles problemas.
+# En el caso más ideal, veríamos distribuciones normales que justificarían el umbral de 3 MAD utilizado en la detección de valores atípicos.
+# Una gran proporción de células en otro modo sugiere que las métricas de control de calidad podrían estar correlacionadas con algún estado biológico,
+# lo que podría llevar a la pérdida de distintos tipos de células durante el filtrado; o que hubo inconsistencias con la preparación de la biblioteca para un subconjunto de células,
+# un fenómeno no poco común en los protocolos basados en placas.
 
+colData(sce.416b) <- cbind(colData(sce.416b), df)
+sce.416b$block <- factor(sce.416b$block)
+sce.416b$phenotype <- ifelse(grepl("induced", sce.416b$phenotype),
+                             "induced", "wild type")
+sce.416b$discard <- reasons$discard
+
+library(scater)
+gridExtra::grid.arrange(
+  plotColData(sce.416b, x="block", y="sum", colour_by="discard",
+              other_fields="phenotype") + facet_wrap(~phenotype) +
+    scale_y_log10() + ggtitle("Total count"),
+  plotColData(sce.416b, x="block", y="detected", colour_by="discard",
+              other_fields="phenotype") + facet_wrap(~phenotype) +
+    scale_y_log10() + ggtitle("Detected features"),
+  plotColData(sce.416b, x="block", y="subsets_Mito_percent",
+              colour_by="discard", other_fields="phenotype") +
+    facet_wrap(~phenotype) + ggtitle("Mito percent"),
+  plotColData(sce.416b, x="block", y="altexps_ERCC_percent",
+              colour_by="discard", other_fields="phenotype") +
+    facet_wrap(~phenotype) + ggtitle("ERCC percent"),
+  ncol=1
+)
+
+
+# Otro diagnóstico útil consiste en trazar la proporción de recuentos mitocondriales frente a algunas de las otras métricas de control de calidad.
+# El objetivo es confirmar que no hay células con grandes recuentos totales y grandes recuentos mitocondriales,
+# para asegurar que no estamos eliminando inadvertidamente células de alta calidad que resultan ser altamente activas metabólicamente
+# (por ejemplo, hepatocitos). Lo demostramos utilizando los datos de un experimento más amplio que incluye el cerebro del ratón (Zeisel et al. 2015);
+# en este caso, no observamos ningún punto en la esquina superior derecha de la Figura 1.2 que pudiera corresponder a células metabólicamente activas y no dañadas.
+
+#--- loading ---#
+library(scRNAseq)
+sce.zeisel <- ZeiselBrainData()
+
+library(scater)
+sce.zeisel <- aggregateAcrossFeatures(sce.zeisel,
+                                      id=sub("_loc[0-9]+$", "", rownames(sce.zeisel)))
+
+#--- gene-annotation ---#
+library(org.Mm.eg.db)
+rowData(sce.zeisel)$Ensembl <- mapIds(org.Mm.eg.db,
+                                      keys=rownames(sce.zeisel), keytype="SYMBOL", column="ENSEMBL")
+
+sce.zeisel <- addPerCellQC(sce.zeisel,
+                           subsets=list(Mt=rowData(sce.zeisel)$featureType=="mito"))
+
+qc <- quickPerCellQC(colData(sce.zeisel),
+                     sub.fields=c("altexps_ERCC_percent", "subsets_Mt_percent"))
+sce.zeisel$discard <- qc$discard
+
+plotColData(sce.zeisel, x="sum", y="subsets_Mt_percent", colour_by="discard")
+
+# La comparación de los porcentajes de ERCC y mitocondriales también puede ser informativa.
+# Las células de baja calidad con pequeños porcentajes mitocondriales,
+# grandes porcentajes de ERCC y pequeños tamaños de biblioteca son probablemente núcleos despojados, es decir,
+# que han sido tan extensamente dañados que han perdido todo el contenido citoplasmático.
+# Por otro lado, las células con altos porcentajes mitocondriales y bajos porcentajes de ERCC
+# pueden representar células no dañadas que son metabólicamente activas.
+# Esta interpretación también se aplica a los estudios de núcleos individuales,
+# pero con un cambio de enfoque: los núcleos despojados se convierten en las bibliotecas de interés,
+# mientras que las células no dañadas se consideran de baja calidad.
+
+plotColData(sce.zeisel, x="altexps_ERCC_percent", y="subsets_Mt_percent",
+            colour_by="discard")
+
+
+
+# PARA REMOVER LAS CELULAS DE BAJA CALIDAD
+
+# Keeping the columns we DON'T want to discard.
+filtered <- sce.416b[,!reasons$discard]
+
+# La otra opción es simplemente marcar las células de baja calidad como tales y retenerlas en el análisis posterior.
+# El objetivo es permitir que se formen grupos de células de baja calidad y, a continuación,
+# identificar e ignorar dichos grupos durante la interpretación de los resultados.
+# Este enfoque evita descartar los tipos de células que tienen valores pobres para las métricas de control de calidad,
+# aplazando la decisión sobre si un grupo de tales células representa un estado biológico genuino.
+
+marked <- sce.416b
+marked$discard <- reasons$discard
+
+
+# Para los análisis de rutina, sugerimos realizar la eliminación por defecto para evitar las complicaciones derivadas de las células de baja calidad.
+# Esto permite caracterizar la mayor parte de la estructura de la población sin -o, al menos, con menos- preocupaciones sobre su validez.
+# Una vez realizado el análisis inicial, y si hay alguna preocupación sobre los tipos celulares descartados (Sección 1.5 avanzada),
+# se puede realizar un reanálisis más exhaustivo en el que sólo se marquen las células de baja calidad.
+# De este modo se recuperan tipos celulares con bajo contenido de ARN, altas proporciones mitocondriales, etc.,
+# que sólo deben interpretarse en la medida en que "rellenen los huecos" del análisis inicial.
