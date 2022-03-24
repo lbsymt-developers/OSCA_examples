@@ -104,3 +104,72 @@ sce_138852 <- scater::runUMAP(sce_138852)
 # head(reducedDim(sce, "UMAP_uwot"))
 
 save(sce_138852, file = "data/sce_138852.RData")
+
+load("data/sce_138852.RData")
+
+#########################################################
+#########################################################
+#########################################################
+# CONTROL DE CALIDAD
+library(scuttle)
+location <- rowRanges(sce_138852)
+is.mito <- any(seqnames(location)=="MT")
+df <- perCellQCMetrics(sce_138852, subsets=list(Mito=is.mito))
+summary(df$sum)
+summary(df$detected)
+summary(df$subsets_Mito_percent)
+summary(df$altexps_ERCC_percent)
+
+sce_138852 <- addPerCellQCMetrics(sce_138852, subsets=list(Mito=is.mito))
+colnames(colData(sce_138852))
+
+qc.lib <- df$sum < 1e5
+qc.nexprs <- df$detected < 5e3
+qc.spike <- df$altexps_ERCC_percent > 10
+qc.mito <- df$subsets_Mito_percent > 10
+discard <- qc.lib | qc.nexprs | qc.spike | qc.mito
+
+reasons <- perCellQCFilters(df,
+                            sub.fields=c("subsets_Mito_percent"))
+colSums(as.matrix(reasons))
+
+DataFrame(LibSize=sum(qc.lib), NExprs=sum(qc.nexprs),
+          SpikeProp=sum(qc.spike), MitoProp=sum(qc.mito), Total=sum(discard))
+
+stats <- cbind(log10(df$sum), log10(df$detected),
+               df$subsets_Mito_percent, df$altexps_ERCC_percent)
+
+colData(sce_138852) <- cbind(colData(sce_138852), df)
+sce_138852$batch <- factor(sce_138852$batch)
+sce_138852$batchCond <- ifelse(grepl("induced", sce_138852$phenotype),
+                             "induced", "wild type")
+
+sce_138852$discard <- reasons$discard
+
+library(scater)
+tiff("images/diagnostic_plot.tiff", height = 30, width = 25, units='cm',
+     compression = "lzw", res = 300)
+gridExtra::grid.arrange(
+  plotColData(sce_138852, x="batch", y="sum", colour_by="discard",
+              other_fields="batchCond") + facet_wrap(~batchCond) +
+    scale_y_log10() + ggtitle("Total count") +
+    theme(text = element_text(size = 20)),
+  plotColData(sce_138852, x="batch", y="detected", colour_by="discard",
+              other_fields="batchCond") + facet_wrap(~batchCond) +
+    scale_y_log10() + ggtitle("Detected features") +
+    theme(text = element_text(size = 20)),
+  plotColData(sce_138852, x="batch", y="subsets_Mito_percent",
+              colour_by="discard", other_fields="batchCond") +
+    facet_wrap(~batchCond) + ggtitle("Mito percent") +
+    theme(text = element_text(size = 20)),
+  ncol=1
+)
+dev.off()
+
+sce_138852 <- addPerCellQC(sce_138852,
+                           subsets=list(Mt=rowData(sce_138852)$featureType=="mito"))
+qc <- quickPerCellQC(colData(sce_138852),
+                     sub.fields=c("subsets_Mt_percent"))
+sce_138852$discard <- qc$discard
+plotColData(sce_138852, x="sum", y="subsets_Mt_percent", colour_by="discard")
+
