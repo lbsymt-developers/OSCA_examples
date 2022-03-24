@@ -173,3 +173,43 @@ qc <- quickPerCellQC(colData(sce_138852),
 sce_138852$discard <- qc$discard
 plotColData(sce_138852, x="sum", y="subsets_Mt_percent", colour_by="discard")
 
+tiff("images/UMAP_gse138852.tiff", height = 30, width = 25, units='cm',
+     compression = "lzw", res = 300)
+plotUMAP(sce_138852, colour_by="cellType", shape_by = "batchCond") +
+  theme(text = element_text(size = 20))
+dev.off()
+
+library(scran)
+g <- buildSNNGraph(sce_138852, k=10, use.dimred = 'PCA')
+clust <- igraph::cluster_walktrap(g)$membership
+colLabels(sce_138852) <- factor(clust)
+plotUMAP(sce_138852, colour_by="label")
+markers <- scran::findMarkers(sce_138852, pval.type="some", direction="up")
+table(colLabels(sce_138852))
+marker.set <- markers[["11"]]
+as.data.frame(marker.set[1:30,1:3])
+
+tiff("images/expression_genes.tiff", height = 30, width = 25, units='cm',
+     compression = "lzw", res = 300)
+plotExpression(sce_138852, features=c("APOE", "TOMM40",
+                                    "APOC1", "CLU"), x="label", colour_by="label")+
+  theme(text = element_text(size = 20))
+dev.off()
+
+
+tiff("images/UMAP_labels.tiff", height = 30, width = 25, units='cm',
+     compression = "lzw", res = 300)
+plotUMAP(sce_138852, colour_by="label")+
+  theme(text = element_text(size = 20))
+dev.off()
+
+# VARIANZA
+
+set.seed(1001)
+dec.pbmc <- modelGeneVarByPoisson(sce_138852)
+top.pbmc <- getTopHVGs(dec.pbmc, prop=0.1)
+plot(dec.pbmc$mean, dec.pbmc$total, pch=16, cex=0.5,
+     xlab="Mean of log-expression", ylab="Variance of log-expression")+
+  theme(text = element_text(size = 20))
+curfit <- metadata(dec.pbmc)
+curve(curfit$trend(x), col='dodgerblue', add=TRUE, lwd=2)
