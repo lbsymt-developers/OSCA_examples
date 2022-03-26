@@ -213,3 +213,6 @@ plot(dec.pbmc$mean, dec.pbmc$total, pch=16, cex=0.5,
   theme(text = element_text(size = 20))
 curfit <- metadata(dec.pbmc)
 curve(curfit$trend(x), col='dodgerblue', add=TRUE, lwd=2)
+
+
+# hacer heatmap de los genes expresados y el grafico por tipo celular
